@@ -6,3 +6,10 @@ System Volume Information/
 # Python
 __pycache__/
 *.pyc
+
+# Unused standalone scripts
+code_drums.py
+collision_test.py
+
+# Unused project folder
+CircuitPython_Code/
