@@ -1,0 +1,76 @@
+#Importing classes from modules
+import pykit_explorer
+from imu_sensor import IMUSensor  #Used to read acceleration data from the IMU sensor
+from neopixels import NeoPixels, Colors  #Used to control the NeoPixels(LED's) and set their colors
+from ble_uart import BLEUart    #Used to establish a Bluetooth connection and send data to a mobile app
+from lcd_display import LCDDisplay, Colors #Used to control the LCD display and set its colors
+from digital_io import DigitalInput  #Used to access UserInput Button to pause the program when the button is pressed
+#Instantiating the classes into Global variables
+imu = IMUSensor()
+px = NeoPixels()
+ble = BLEUart()
+lcd = LCDDisplay()
+btn = DigitalInput(board.D3) 
+lcd.backlight_on                # Turn on the backlight of the LCD
+
+group, palette = lcd.make_group(Colors.BLACK)   # Create a group for the LCD display with a black background
+
+#labels for displaying the acceleration values and RGB values on the LCD
+imuLabel1 = lcd.add_label(group,"ax: ", 40, 20, scale = 2)
+imuLabel2 = lcd.add_label(group,"ay: ", 40, 40, scale = 2)
+imuLabel3 = lcd.add_label(group,"az: ", 40, 60, scale = 2)
+RGBLabel = lcd.add_label(group,"RGB: ", 40, 100, scale = 2)
+imuText1 = lcd.add_label(group,"", 100, 20, scale = 2)
+imuText2 = lcd.add_label(group,"", 100, 40, scale = 2)
+imuText3 = lcd.add_label(group,"", 100, 60, scale = 2)
+rgbText = lcd.add_label(group,"RGB: " + str((0,0,0)), 150, 100, scale = 2)
+#constants
+GRAVITY = 10
+RGB_MAX = 255
+RGB_MIN = 0
+
+#function to convert the acceleration values into RGB values between a range
+#of 0-255 for each color channel (red, green, blue) to light up the neopixels. 
+#function also ensures that the RGB values do not exceed the maximum or minimum limits of 255 and 0 respectively.
+ 
+def acceleration_to_rgb(ax, ay, az):
+    r = int(((ax+GRAVITY)/(GRAVITY*2))*RGB_MAX) #maps the acceleration value to a range of 0-255 for red
+    g = int(((ay+GRAVITY)/(GRAVITY*2))*RGB_MAX) #maps the acceleration value to a range of 0-255 for green
+    b = int(((az+GRAVITY)/(GRAVITY*2))*RGB_MAX) #maps the acceleration value to a range of 0-255 for blue
+    if(r> RGB_MAX):
+        r = RGB_MAX
+    elif(g>RGB_MAX):
+        g = RGB_MAX
+    elif(b>RGB_MAX):
+        b = RGB_MAX
+    elif(r<RGB_MIN):
+        r = RGB_MIN
+    elif(g<RGB_MIN):
+        g = RGB_MIN
+    elif(b<RGB_MIN):
+        b = RGB_MIN
+    return (r, g, b)
+
+
+while True:
+    ax, ay, az = imu.acceleration   #sets the acceleration values from the IMU sensor to the variables ax, ay, az for x, y, z axis 
+    print(ax, ay, az) 
+    r,g,b = acceleration_to_rgb(ax, ay, az)
+    rgbcoordinate = (r,g,b)         #setting RGB values to a tuple to modify the color of the neopixels and to display on the LCD
+    print(rgbcoordinate)
+    px.fill(rgbcoordinate)          #Commands the NeoPixels to light up with the RGB color values
+    #displaying data on the lcd
+    imuText1.text = str(round(ax, 2))
+    imuText2.text = str(round(ay, 2))
+    imuText3.text = str(round(az, 2))
+    rgbText.text = str(rgbcoordinate)
+    #sending data to the app via bluetooth
+    msg = ble.poll()
+    if ble.connected:
+        ble.send("ax: " + str(round(ax, 2))+"\n" + "ay: " + str(round(ay, 2))+"\n" + "az: "
+                 + str(round(az, 2))+"\n" + "RGB: " + str(rgbcoordinate)+ "\n")
+                 
+    while (btn.is_pressed()):  #pauses the program when the button is pressed
+        time.sleep(0.05)
+
+    time.sleep(0.02) #adds a small delay to prevent overwhelming the system with too many updates in a short period of time

@@ -1,0 +1,8 @@
+# CircuitPython system files
+boot_out.txt
+settings.toml
+System Volume Information/
+
+# Python
+__pycache__/
+*.pyc
